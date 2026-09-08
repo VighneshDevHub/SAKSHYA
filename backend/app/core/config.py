@@ -29,6 +29,17 @@ class Settings(BaseSettings):
 
     PUBLIC_BASE_URL: str = "http://localhost:3000"
 
+    # Additional CORS origins beyond PUBLIC_BASE_URL — comma-separated.
+    # Example: "https://pramaan.ntro.gov.in,https://www.pramaan.ntro.gov.in"
+    EXTRA_CORS_ORIGINS: str = ""
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        origins = [self.PUBLIC_BASE_URL]
+        if self.EXTRA_CORS_ORIGINS:
+            origins += [o.strip() for o in self.EXTRA_CORS_ORIGINS.split(",") if o.strip()]
+        return origins
+
     @field_validator("SIGNING_PRIVATE_KEY_PEM", "SIGNING_PUBLIC_KEY_PEM")
     @classmethod
     def _unescape_pem_newlines(cls, v: str | None) -> str | None:
