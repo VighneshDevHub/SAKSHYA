@@ -2,6 +2,280 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   ForensicGuard — government-style dual-theme palette.
+   Root is govt-light (NTRO / NIC inspired: deep navy + royal blue on cool
+   white / light grey). data-theme="dark" / "ink-dark" activates the ink
+   variant for nighttime forensics work.
+
+   All CSS-var names from the MVP (--fg-page, --fg-ink, --fg-panel, …) are
+   preserved verbatim — existing components are not rewritten. New tokens
+   for the govt gradient-free, non-glassmorphic aesthetic are added as new
+   variables that may be consumed by the new AppShell and page layouts.
+   ========================================================================== */
+
+:root,
+[data-theme="govt-light"] {
+  color-scheme: light;
+
+  /* Existing MVP tokens — mapped to government palette. */
+  --fg-page: 245 247 250;         /* #F5F7FA cool off-white */
+  --fg-ink: 255 255 255;          /* white for contrast text regions */
+  --fg-panel: 255 255 255;        /* pure white cards — NIC style */
+  --fg-field: 246 248 252;        /* very light blue-grey inputs */
+  --fg-line: 208 215 222;         /* #D0D7DE */
+  --fg-muted: 91 107 123;         /* #5B6B7B */
+  --fg-main: 33 33 33;            /* #212121 near-black text */
+  --fg-inverse: 255 255 255;
+
+  --fg-amber: 212 175 55;         /* #D4AF37 govt gold */
+  --fg-amber-light: 244 231 192;
+
+  --fg-teal: 46 125 50;           /* #2E7D32 success green */
+  --fg-teal-dim: 226 239 228;
+
+  --fg-alert: 198 40 40;          /* #C62828 alert red */
+  --fg-alert-dim: 249 224 222;
+
+  --fg-typeblue: 0 91 172;        /* #005BAC secondary blue */
+  --fg-typeblue-dim: 228 236 246;
+
+  --fg-typeviolet: 92 78 156;
+  --fg-typeviolet-dim: 236 233 248;
+
+  /* New government tokens. */
+  --fg-navy: 0 51 102;            /* #003366 primary navy */
+  --fg-royal: 0 91 172;           /* #005BAC secondary blue */
+  --fg-royal-dark: 0 68 145;
+  --fg-royal-light: 228 236 246;
+}
+
+[data-theme="dark"],
+[data-theme="ink-dark"] {
+  color-scheme: dark;
+
+  /* Existing MVP tokens — deep ink night-mode. */
+  --fg-page: 13 17 23;
+  --fg-ink: 18 22 31;
+  --fg-panel: 18 22 31;
+  --fg-field: 11 14 20;
+  --fg-line: 39 47 61;
+  --fg-muted: 138 147 166;
+  --fg-main: 233 238 245;
+  --fg-inverse: 11 14 20;
+
+  --fg-amber: 201 138 58;
+  --fg-amber-light: 224 171 99;
+
+  --fg-teal: 34 184 160;
+  --fg-teal-dim: 25 102 92;
+
+  --fg-alert: 226 80 76;
+  --fg-alert-dim: 98 33 33;
+
+  --fg-typeblue: 92 141 255;
+  --fg-typeblue-dim: 33 52 96;
+
+  --fg-typeviolet: 155 123 234;
+  --fg-typeviolet-dim: 57 46 90;
+
+  /* Government night-mode tokens. */
+  --fg-navy: 5 25 48;
+  --fg-royal: 47 104 188;
+  --fg-royal-dark: 32 79 155;
+  --fg-royal-light: 22 40 72;
+}
+
+/* ==========================================================================
+   Base layer.
+   ========================================================================== */
+@layer base {
+  html {
+    background: rgb(var(--fg-page));
+  }
+
+  body {
+    min-height: 100vh;
+    background: rgb(var(--fg-page));
+    color: rgb(var(--fg-main));
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: rgb(var(--fg-main));
+    letter-spacing: -0.01em;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  *:focus-visible {
+    outline: 2px solid rgb(var(--fg-royal));
+    outline-offset: 2px;
+  }
+}
+
+/* ==========================================================================
+   Component layer — reusable government-style primitives.
+   No glassmorphism, no neon, no gradients. Solid fills, strong borders,
+   flat panels, generous spacing.
+   ========================================================================== */
+@layer components {
+  .fg-panel {
+    @apply bg-panel border border-line rounded-md shadow-card;
+  }
+
+  .fg-panel-header {
+    @apply flex items-center justify-between border-b border-line px-5 py-3;
+  }
+
+  .fg-panel-title {
+    @apply font-display text-sm font-semibold tracking-wide uppercase text-main;
+  }
+
+  .fg-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border
+      border-line bg-panel px-3 py-2 text-sm font-medium text-main
+      hover:bg-field hover:border-govt-blue active:translate-y-px
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .fg-btn-primary {
+    @apply fg-btn border-govt-navy bg-govt-navy text-white
+      hover:bg-govt-blueDark hover:border-govt-blueDark;
+  }
+
+  .fg-btn-danger {
+    @apply fg-btn border-govt-red bg-govt-red text-white
+      hover:bg-govt-red/90 hover:border-govt-red;
+  }
+
+  .fg-btn-ghost {
+    @apply fg-btn border-transparent bg-transparent hover:bg-field;
+  }
+
+  .fg-input {
+    @apply w-full rounded-md border border-line bg-field px-3 py-2 text-sm
+      text-main placeholder:text-muted
+      focus:border-govt-blue focus:bg-panel focus:shadow-focus
+      focus:outline-none;
+  }
+
+  .fg-label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-muted mb-1;
+  }
+
+  .fg-badge {
+    @apply inline-flex items-center gap-1 rounded-sm border border-line
+      bg-field px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted;
+  }
+
+  .fg-badge-dot {
+    @apply h-1.5 w-1.5 rounded-full bg-muted;
+  }
+
+  .fg-badge--navy   { @apply border-govt-blueLight bg-govt-blueLight text-govt-navy; }
+  .fg-badge--green  { @apply border-govt-green/20 bg-govt-greenLight text-govt-green; }
+  .fg-badge--red    { @apply border-govt-red/20 bg-govt-redLight text-govt-red; }
+  .fg-badge--gold   { @apply border-govt-gold/30 bg-govt-goldLight text-govt-goldDark; }
+  .fg-badge--blue   { @apply border-typeblue/20 bg-typeblue-dim text-typeblue; }
+
+  .fg-nav-item {
+    @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm
+      text-muted hover:text-main hover:bg-field;
+  }
+
+  .fg-nav-item[data-active="true"] {
+    @apply text-govt-navy bg-govt-blueLight font-medium;
+  }
+
+  [data-theme="dark"] .fg-nav-item[data-active="true"],
+  [data-theme="ink-dark"] .fg-nav-item[data-active="true"] {
+    @apply text-white bg-govt-blueDark/60;
+  }
+
+  .fg-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .fg-table thead th {
+    @apply border-b border-line bg-field px-4 py-2 text-left text-xs
+      font-semibold uppercase tracking-wider text-muted;
+  }
+
+  .fg-table tbody td {
+    @apply border-b border-line px-4 py-3 text-main align-middle;
+  }
+
+  .fg-table tbody tr:hover td {
+    @apply bg-field/60;
+  }
+
+  .fg-topbar {
+    @apply sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-line
+      bg-panel px-4 md:px-6;
+  }
+
+  .fg-sidebar {
+    @apply w-64 shrink-0 border-r border-line bg-panel p-3 hidden md:flex md:flex-col;
+  }
+
+  .fg-progress-track {
+    @apply relative h-2 w-full overflow-hidden rounded-sm bg-field border border-line;
+  }
+
+  .fg-progress-fill {
+    @apply h-full bg-govt-blue transition-[width] duration-300 ease-out;
+  }
+
+  .fg-hero-band {
+    @apply bg-govt-navy text-white;
+    background-image:
+      linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 28px),
+      linear-gradient(0deg,  rgba(255,255,255,0.03) 0 1px, transparent 1px 28px);
+  }
+
+  .fg-section-anchor {
+    scroll-margin-top: 80px;
+  }
+}
+
 ::selection {
-  background: rgba(201, 138, 58, 0.35);
+  background: rgb(var(--fg-typeblue) / 0.22);
+}
+
+/* Scrollbar styling (subtle — govt style, no flashy colours). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--fg-line)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--fg-line));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--fg-muted));
+  background-clip: content-box;
 }
