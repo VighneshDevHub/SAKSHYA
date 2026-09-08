@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +8,7 @@ from app.api.deps import get_db, get_signing_keys
 from app.core.crypto import verify_signature
 from app.models.operation_record import LedgerEntry, OperationRecord
 from app.schemas.operation import VerificationResult
-from app.services import ledger_service
+from app.services import ledger_service, notification_service
 
 router = APIRouter(prefix="/verify", tags=["verify"])
 
@@ -50,6 +52,12 @@ async def verify_operation(
         detail = (
             f"Ledger chain broken at sequence {chain_result.broken_at_sequence}: "
             f"{chain_result.reason}"
+        )
+
+    if not overall:
+        await notification_service.notify_tamper_detected_broadcast(
+            db,
+            detail_str=detail,
         )
 
     return VerificationResult(
