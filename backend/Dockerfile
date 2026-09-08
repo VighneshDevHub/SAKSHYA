@@ -15,5 +15,5 @@ COPY . .
 
 EXPOSE 8000
 
-# In production, drop --reload (this is already the compose default).
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway injects $PORT at runtime; fall back to 8000 for local/Docker use.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -30,4 +30,6 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./next.config.js
 
 EXPOSE 3000
+# Railway injects $PORT; Next.js respects the PORT env var natively.
+ENV PORT=3000
 CMD ["npm", "run", "start"]
