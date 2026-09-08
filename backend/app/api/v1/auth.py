@@ -1,9 +1,13 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
+from app.core.logging import system_log_buffer
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.system_log import LogCategory, LogLevel
 from app.models.user import User
 from app.schemas.auth import TokenResponse, UserLogin, UserOut, UserRegister
 
@@ -31,7 +35,17 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)) -> Token
     # Identical error for "no such user" and "wrong password" — don't
     # leak which one it was (account-enumeration hole).
     if user is None or not verify_password(payload.password, user.hashed_password):
+        asyncio.create_task(
+            system_log_buffer.log(
+                LogLevel.SECURITY,
+                LogCategory.SECURITY,
+                "Failed login attempt",
+                {"email": payload.email},
+                source="auth.login",
+            )
+        )
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     token = create_access_token(subject=user.id)
-    return TokenResponse(access_token=token)
+    # role and user_id added ADDITIVELY — old clients ignore extra fields.
+    return TokenResponse(access_token=token, role=user.role, user_id=user.id)
