@@ -104,13 +104,47 @@ def _draw_recovered_files_table(c: canvas.Canvas, details: dict, x: float, y: fl
     return y
 
 
-def generate_operation_pdf(record: dict) -> bytes:
+def generate_operation_pdf(record: dict, session=None) -> bytes:
     """`record` matches OperationRecordOut's shape (see
-    app/schemas/operation.py). Returns raw PDF bytes."""
+    app/schemas/operation.py). Returns raw PDF bytes.
+
+    Accepts an optional async session; if provided, consults settings
+    for certificate_header_text before falling back to the hardcoded
+    default. Keeps the sync signature intact by never awaiting inside;
+    the caller can resolve settings beforehand if needed, or we simply
+    fall back when no DB session is attached (keeps legacy tests
+    byte-exact).
+    """
     operation_type = record["operation_type"]
     title = TITLES.get(operation_type, "OPERATION REPORT")
     verify_url = f"{settings.PUBLIC_BASE_URL}/verify/{record['certificate_id']}"
     qr_buffer = _build_qr_image(verify_url)
+
+    header_subtitle = "Issued by ForensicGuard — NIST SP 800-88 Compliant Digital Forensics Platform"
+    if session is not None:
+        try:
+            import asyncio
+            from app.services import settings_service
+
+            async def _resolve() -> str:
+                try:
+                    s = await settings_service.get_settings(session)
+                    return s.certificate_header_text or header_subtitle
+                except Exception:
+                    return header_subtitle
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    resolved = header_subtitle
+                else:
+                    resolved = loop.run_until_complete(_resolve())
+            except Exception:
+                resolved = header_subtitle
+            if resolved and resolved.strip():
+                header_subtitle = resolved
+        except Exception:
+            pass
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -125,7 +159,7 @@ def generate_operation_pdf(record: dict) -> bytes:
     c.setFont("Helvetica", 10)
     c.drawString(
         margin, PAGE_HEIGHT - 26 * mm,
-        "Issued by ForensicGuard — NIST SP 800-88 Compliant Digital Forensics Platform",
+        header_subtitle,
     )
 
     y = PAGE_HEIGHT - 50 * mm
