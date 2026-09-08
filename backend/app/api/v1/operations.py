@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,7 +11,7 @@ from app.core.crypto import sign_payload
 from app.models.operation_record import LedgerEntry, OperationRecord
 from app.models.user import User
 from app.schemas.operation import OperationRecordOut, OperationReportIn
-from app.services import ledger_service
+from app.services import ledger_service, notification_service
 from app.services.pdf_service import generate_operation_pdf
 
 router = APIRouter(prefix="/operations", tags=["operations"])
@@ -82,6 +83,12 @@ async def submit_operation_report(
     await db.commit()
     await db.refresh(record)
     await db.refresh(ledger_entry)
+
+    await notification_service.notify_cert_generated(
+        db,
+        operator_user_id=current_user.id,
+        certificate_id=record.certificate_id,
+    )
 
     return _to_out(record, ledger_entry.sequence_number)
 
