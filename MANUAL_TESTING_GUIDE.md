@@ -842,3 +842,6 @@ For a clean end-to-end demo, run these in order:
 
 *Built for SIH 2026 Grand Finale — Problem ID 26149*  
 *Stack: FastAPI · Next.js 14 · SQLite/PostgreSQL · ECDSA P-256 · SHA-256 · NIST SP 800-88*
+
+
+
