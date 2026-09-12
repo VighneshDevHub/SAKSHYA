@@ -17,7 +17,7 @@ Python can reach — documented here rather than glossed over.
 import os
 import random
 import string
-import time
+import sys
 from dataclasses import dataclass
 
 RENAME_PASSES = 3
@@ -35,10 +35,14 @@ def _random_name(length: int = 16) -> str:
 
 
 def reset_timestamps(path: str) -> None:
-    """Reset access/modified time to the epoch, removing the temporal
-    trail of when the file was last touched before deletion."""
-    epoch = 0
-    os.utime(path, (epoch, epoch))
+    """Reset timestamps using a value supported by the target filesystem.
+
+    FAT-family removable media cannot represent Unix epoch timestamps and
+    raises WinError 87 for ``(0, 0)``.  1980-01-01 is the earliest portable
+    Windows/FAT timestamp; POSIX filesystems retain the Unix epoch behavior.
+    """
+    scrub_timestamp = 315532800 if sys.platform.startswith("win") else 0
+    os.utime(path, (scrub_timestamp, scrub_timestamp))
 
 
 def scrub_filename(path: str, passes: int = RENAME_PASSES) -> str:

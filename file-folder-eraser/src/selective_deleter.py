@@ -55,6 +55,7 @@ def secure_delete_file(path: str) -> DeleteResult:
             metadata_scrubbed=False, error="File not found",
         )
 
+    bytes_overwritten = 0
     try:
         bytes_overwritten = _overwrite_content(path)
         scrub_result = scrub_metadata(path)
@@ -65,7 +66,7 @@ def secure_delete_file(path: str) -> DeleteResult:
         )
     except OSError as e:
         return DeleteResult(
-            original_path=path, success=False, bytes_overwritten=0,
+            original_path=path, success=False, bytes_overwritten=bytes_overwritten,
             metadata_scrubbed=False, error=str(e),
         )
 

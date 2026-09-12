@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 from src.metadata_scrubber import reset_timestamps, scrub_filename, scrub_metadata
@@ -11,8 +12,9 @@ def test_reset_timestamps_sets_epoch(tmp_path):
     reset_timestamps(str(path))
 
     stat = os.stat(path)
-    assert stat.st_mtime == 0
-    assert stat.st_atime == 0
+    expected = 315532800 if sys.platform.startswith("win") else 0
+    assert stat.st_mtime == expected
+    assert stat.st_atime == expected
 
 
 def test_scrub_filename_renames_away_from_original(tmp_path):
