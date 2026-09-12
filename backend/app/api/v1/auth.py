@@ -20,7 +20,11 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)) ->
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    user = User(email=payload.email, hashed_password=hash_password(payload.password))
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        role=payload.role,
+    )
     db.add(user)
     await db.commit()
     await db.refresh(user)

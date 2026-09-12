@@ -6,8 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import get_current_user, get_db, require_roles
 from app.models.devices import Device
 from app.models.user import User, UserRole
-from app.schemas.device import DeviceCreateIn, DeviceOut, DeviceUpdateIn
-from app.services.device_service import list_devices
+from app.schemas.device import DeviceCreateIn, DeviceDetectionOut, DeviceOut, DeviceUpdateIn
+from app.services.device_service import detect_host_devices, list_devices
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -41,6 +41,19 @@ async def list_devices_endpoint(
         offset=offset,
     )
     return [DeviceOut.model_validate(r) for r in rows]
+
+
+@router.post("/detect", response_model=DeviceDetectionOut)
+async def detect_devices_endpoint(
+    db: AsyncSession = Depends(get_db),
+    _writer: User = Depends(require_roles(*_WRITE_ROLES)),
+) -> DeviceDetectionOut:
+    devices = await detect_host_devices(db)
+    return DeviceDetectionOut(
+        platform="Windows",
+        detected_count=len(devices),
+        devices=[DeviceOut.model_validate(device) for device in devices],
+    )
 
 
 @router.get("/{device_id}", response_model=DeviceOut)

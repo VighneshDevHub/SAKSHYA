@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, require_roles
 from app.models.jobs import Job, TaskStatus, generate_job_number
+from app.models.operation_record import OperationType
 from app.models.user import User, UserRole
 from app.schemas.job import (
     JobClaimIn,
@@ -59,6 +60,19 @@ async def create_job(
     db.add(job)
     await db.commit()
     await db.refresh(job)
+    if payload.payload.get("auto_execute") is True:
+        from app.services.job_execution_service import (
+            execute_drive_erase_job,
+            execute_file_erase_job,
+            execute_recovery_job,
+        )
+
+        workers = {
+            OperationType.FILE_ERASE: execute_file_erase_job,
+            OperationType.RECOVERY: execute_recovery_job,
+            OperationType.DRIVE_ERASE: execute_drive_erase_job,
+        }
+        asyncio.create_task(workers[payload.operation_type](job.id, current_user.email))
     return JobOut.model_validate(job)
 
 

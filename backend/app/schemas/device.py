@@ -59,3 +59,11 @@ class DeviceOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DeviceDetectionOut(BaseModel):
+    """Result of a host-level storage inventory scan."""
+
+    platform: str
+    detected_count: int
+    devices: list[DeviceOut]
