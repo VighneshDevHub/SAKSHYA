@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   ForensicGuard — government-style dual-theme palette.
+  PRAMAAN — government-style dual-theme palette.
    Root is govt-light (NTRO / NIC inspired: deep navy + royal blue on cool
    white / light grey). data-theme="dark" / "ink-dark" activates the ink
    variant for nighttime forensics work.
@@ -19,33 +19,33 @@
   color-scheme: light;
 
   /* Existing MVP tokens — mapped to government palette. */
-  --fg-page: 245 247 250;         /* #F5F7FA cool off-white */
-  --fg-ink: 255 255 255;          /* white for contrast text regions */
-  --fg-panel: 255 255 255;        /* pure white cards — NIC style */
-  --fg-field: 246 248 252;        /* very light blue-grey inputs */
-  --fg-line: 208 215 222;         /* #D0D7DE */
-  --fg-muted: 91 107 123;         /* #5B6B7B */
-  --fg-main: 33 33 33;            /* #212121 near-black text */
+  --fg-page: 245 247 250; /* #F5F7FA cool off-white */
+  --fg-ink: 255 255 255; /* white for contrast text regions */
+  --fg-panel: 255 255 255; /* pure white cards — NIC style */
+  --fg-field: 246 248 252; /* very light blue-grey inputs */
+  --fg-line: 208 215 222; /* #D0D7DE */
+  --fg-muted: 91 107 123; /* #5B6B7B */
+  --fg-main: 33 33 33; /* #212121 near-black text */
   --fg-inverse: 255 255 255;
 
-  --fg-amber: 212 175 55;         /* #D4AF37 govt gold */
+  --fg-amber: 212 175 55; /* #D4AF37 govt gold */
   --fg-amber-light: 244 231 192;
 
-  --fg-teal: 46 125 50;           /* #2E7D32 success green */
+  --fg-teal: 46 125 50; /* #2E7D32 success green */
   --fg-teal-dim: 226 239 228;
 
-  --fg-alert: 198 40 40;          /* #C62828 alert red */
+  --fg-alert: 198 40 40; /* #C62828 alert red */
   --fg-alert-dim: 249 224 222;
 
-  --fg-typeblue: 0 91 172;        /* #005BAC secondary blue */
+  --fg-typeblue: 0 91 172; /* #005BAC secondary blue */
   --fg-typeblue-dim: 228 236 246;
 
   --fg-typeviolet: 92 78 156;
   --fg-typeviolet-dim: 236 233 248;
 
   /* New government tokens. */
-  --fg-navy: 0 51 102;            /* #003366 primary navy */
-  --fg-royal: 0 91 172;           /* #005BAC secondary blue */
+  --fg-navy: 0 51 102; /* #003366 primary navy */
+  --fg-royal: 0 91 172; /* #005BAC secondary blue */
   --fg-royal-dark: 0 68 145;
   --fg-royal-light: 228 236 246;
 }
@@ -105,7 +105,12 @@
       border-color 150ms ease;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: rgb(var(--fg-main));
     letter-spacing: -0.01em;
   }
@@ -187,11 +192,21 @@
     @apply h-1.5 w-1.5 rounded-full bg-muted;
   }
 
-  .fg-badge--navy   { @apply border-govt-blueLight bg-govt-blueLight text-govt-navy; }
-  .fg-badge--green  { @apply border-govt-green/20 bg-govt-greenLight text-govt-green; }
-  .fg-badge--red    { @apply border-govt-red/20 bg-govt-redLight text-govt-red; }
-  .fg-badge--gold   { @apply border-govt-gold/30 bg-govt-goldLight text-govt-goldDark; }
-  .fg-badge--blue   { @apply border-typeblue/20 bg-typeblue-dim text-typeblue; }
+  .fg-badge--navy {
+    @apply border-govt-blueLight bg-govt-blueLight text-govt-navy;
+  }
+  .fg-badge--green {
+    @apply border-govt-green/20 bg-govt-greenLight text-govt-green;
+  }
+  .fg-badge--red {
+    @apply border-govt-red/20 bg-govt-redLight text-govt-red;
+  }
+  .fg-badge--gold {
+    @apply border-govt-gold/30 bg-govt-goldLight text-govt-goldDark;
+  }
+  .fg-badge--blue {
+    @apply border-typeblue/20 bg-typeblue-dim text-typeblue;
+  }
 
   .fg-nav-item {
     @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm
@@ -244,8 +259,16 @@
   .fg-hero-band {
     @apply bg-govt-navy text-white;
     background-image:
-      linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 28px),
-      linear-gradient(0deg,  rgba(255,255,255,0.03) 0 1px, transparent 1px 28px);
+      linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0 1px,
+        transparent 1px 28px
+      ),
+      linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.03) 0 1px,
+        transparent 1px 28px
+      );
   }
 
   .fg-section-anchor {

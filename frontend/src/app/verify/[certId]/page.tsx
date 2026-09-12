@@ -48,7 +48,7 @@ export default function VerifyPage({ params }: { params: { certId: string } }) {
           <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted">
             Independent Verification
           </p>
-          <h1 className="text-2xl font-bold text-white">ForensicGuard</h1>
+          <h1 className="text-2xl font-bold text-white">PRAMAAN</h1>
         </div>
 
         {state.status === "loading" && (

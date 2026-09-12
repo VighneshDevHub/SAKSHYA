@@ -155,7 +155,7 @@ export default function LandingPage() {
             </span>
             <span className="leading-tight">
               <span className="block font-display text-[17px] font-bold tracking-tight text-govt-navy">
-                ForensicGuard
+                PRAMAAN
               </span>
               <span className="block font-mono text-[9px] uppercase tracking-[0.28em] text-muted">
                 NTRO · Digital Forensics &amp; Sanitisation
@@ -169,6 +169,7 @@ export default function LandingPage() {
             <a href="#workflow" className="text-main hover:text-govt-navy">Workflow</a>
             <a href="#faq" className="text-main hover:text-govt-navy">FAQ</a>
             <a href="/verify" className="text-main hover:text-govt-navy">Verify Certificate</a>
+            <Link href="/dashboard/manual" className="text-main hover:text-govt-navy">User Manual</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Link href="/verify" className="fg-btn !py-1.5 !px-3 text-xs hidden sm:inline-flex">
@@ -204,7 +205,7 @@ export default function LandingPage() {
               Integrated Secure Data Sanitisation &amp; Digital Forensic Recovery Platform
             </h1>
             <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted">
-              ForensicGuard unifies three specialised modules — secure drive
+              PRAMAAN unifies three specialised modules — secure drive
               erasure, selective file/folder sanitisation, and forensic-grade
               file carving &amp; recovery — under a single tamper-resistant
               government workspace, with an immutable SHA-256 chain ledger,
@@ -485,7 +486,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-4 md:px-8">
           <div>
             <div className="font-display text-lg font-semibold tracking-tight">
-              ForensicGuard
+              PRAMAAN
             </div>
             <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/60">
               Digital Forensics Unit · NTRO
@@ -502,6 +503,7 @@ export default function LandingPage() {
               { href: "#architecture", label: "Architecture" },
               { href: "#standards", label: "Standards" },
               { href: "/verify", label: "Verify Certificate" },
+              { href: "/dashboard/manual", label: "User Manual" },
             ]}
           />
           <FooterCol

@@ -10,6 +10,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"ADMINISTRATOR" | "INVESTIGATOR" | "AUDITOR" | "SUPERVISOR">("INVESTIGATOR");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,10 +24,17 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      if (mode === "register") {
-        await register(email, password);
+      const normalizedEmail = email.trim().toLowerCase();
+      const reservedDomain = /@(test|example|invalid|localhost)$/i.test(normalizedEmail);
+      if (!normalizedEmail || !normalizedEmail.includes("@") || reservedDomain || password.length < 8) {
+        throw new AuthError(
+          "Enter a valid email address using a real domain, such as user@ntro.gov.in, and a password of at least 8 characters.",
+        );
       }
-      await login(email, password);
+      if (mode === "register") {
+        await register(normalizedEmail, password, role);
+      }
+      await login(normalizedEmail, password);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof AuthError ? err.message : "Something went wrong");
@@ -88,7 +96,7 @@ export default function LoginPage() {
             </span>
             <span className="leading-tight">
               <span className="block font-display text-xl font-bold tracking-tight text-govt-navy">
-                ForensicGuard
+                PRAMAAN
               </span>
               <span className="block font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
                 Secure Erasure · Digital Forensics · Chain Ledger
@@ -121,7 +129,7 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-              ForensicGuard provides NTRO and allied agencies with a single
+              PRAMAAN provides NTRO and allied agencies with a single
               tamper-resistant workspace for storage sanitisation, evidence
               recovery, and cryptographically anchored reporting. All
               operations are independently verifiable via an immutable
@@ -285,6 +293,25 @@ export default function LoginPage() {
                       className="fg-input"
                     />
                   </label>
+
+                  {mode === "register" && (
+                    <label className="flex flex-col gap-1.5 text-sm">
+                      <span className="fg-label">Select Role</span>
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value as typeof role)}
+                        className="fg-input"
+                      >
+                        <option value="INVESTIGATOR">Investigator</option>
+                        <option value="AUDITOR">Auditor</option>
+                        <option value="SUPERVISOR">Supervisor</option>
+                        <option value="ADMINISTRATOR">Administrator</option>
+                      </select>
+                      <span className="text-[11px] text-muted">
+                        Temporary demo mode: role is assigned during public registration.
+                      </span>
+                    </label>
+                  )}
 
                   <button
                     type="submit"

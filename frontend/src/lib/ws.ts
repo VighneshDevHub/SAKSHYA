@@ -13,8 +13,10 @@ interface UseSocketBase {
 }
 
 function wsHttpToWs(baseUrl: string): string {
-  if (baseUrl.startsWith("http://")) return `ws://${baseUrl.slice("http://".length)}`;
-  if (baseUrl.startsWith("https://")) return `wss://${baseUrl.slice("https://".length)}`;
+  if (baseUrl.startsWith("http://"))
+    return `ws://${baseUrl.slice("http://".length)}`;
+  if (baseUrl.startsWith("https://"))
+    return `wss://${baseUrl.slice("https://".length)}`;
   return baseUrl;
 }
 
@@ -24,12 +26,14 @@ function buildSocket(path: string): WebSocket | null {
   if (!token) return null;
   const base = wsHttpToWs(API_BASE);
   const url = `${base}/api/v1${path}?token=${encodeURIComponent(token)}`;
-  return new WebSocket(url, ["access_token." + token]);
+  return new WebSocket(url);
 }
 
 // ---------------- hooks ----------------
 
-export function useJobSocket(jobId: string | null | undefined): UseSocketBase & {
+export function useJobSocket(
+  jobId: string | null | undefined,
+): UseSocketBase & {
   lastEvent: WSJobEvent | null;
 } {
   const socketRef = useRef<WebSocket | null>(null);
@@ -38,7 +42,11 @@ export function useJobSocket(jobId: string | null | undefined): UseSocketBase & 
 
   const close = useCallback(() => {
     if (socketRef.current) {
-      try { socketRef.current.close(); } catch { /* ignore */ }
+      try {
+        socketRef.current.close();
+      } catch {
+        /* ignore */
+      }
       socketRef.current = null;
     }
   }, []);
@@ -67,7 +75,9 @@ export function useJobSocket(jobId: string | null | undefined): UseSocketBase & 
       closed = true;
       setReadyState("closed");
     };
-    ws.onerror = () => { /* onclose fires right after */ };
+    ws.onerror = () => {
+      /* onclose fires right after */
+    };
     ws.onmessage = (ev) => {
       try {
         const parsed = JSON.parse(String(ev.data)) as WSJobEvent;
@@ -79,7 +89,11 @@ export function useJobSocket(jobId: string | null | undefined): UseSocketBase & 
 
     return () => {
       if (!closed) {
-        try { ws.close(); } catch { /* ignore */ }
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
       }
       socketRef.current = null;
     };
@@ -88,7 +102,9 @@ export function useJobSocket(jobId: string | null | undefined): UseSocketBase & 
   return { readyState, lastEvent, close };
 }
 
-export function useUserSocket(userId: string | null | undefined): UseSocketBase & {
+export function useUserSocket(
+  userId: string | null | undefined,
+): UseSocketBase & {
   lastEvent: WSUserEvent | null;
 } {
   const socketRef = useRef<WebSocket | null>(null);
@@ -97,7 +113,11 @@ export function useUserSocket(userId: string | null | undefined): UseSocketBase 
 
   const close = useCallback(() => {
     if (socketRef.current) {
-      try { socketRef.current.close(); } catch { /* ignore */ }
+      try {
+        socketRef.current.close();
+      } catch {
+        /* ignore */
+      }
       socketRef.current = null;
     }
   }, []);
@@ -126,17 +146,25 @@ export function useUserSocket(userId: string | null | undefined): UseSocketBase 
       closed = true;
       setReadyState("closed");
     };
-    ws.onerror = () => { /* onclose fires right after */ };
+    ws.onerror = () => {
+      /* onclose fires right after */
+    };
     ws.onmessage = (ev) => {
       try {
         const parsed = JSON.parse(String(ev.data)) as WSUserEvent;
         setLastEvent(parsed);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
 
     return () => {
       if (!closed) {
-        try { ws.close(); } catch { /* ignore */ }
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
       }
       socketRef.current = null;
     };
@@ -171,7 +199,11 @@ export function useLogsSocket(): UseSocketBase & {
 
   const close = useCallback(() => {
     if (socketRef.current) {
-      try { socketRef.current.close(); } catch { /* ignore */ }
+      try {
+        socketRef.current.close();
+      } catch {
+        /* ignore */
+      }
       socketRef.current = null;
     }
   }, []);
@@ -196,7 +228,9 @@ export function useLogsSocket(): UseSocketBase & {
       closed = true;
       setReadyState("closed");
     };
-    ws.onerror = () => { /* onclose fires right after */ };
+    ws.onerror = () => {
+      /* onclose fires right after */
+    };
     ws.onmessage = (ev) => {
       try {
         const parsed = JSON.parse(String(ev.data)) as WSLogEvent;
@@ -206,12 +240,18 @@ export function useLogsSocket(): UseSocketBase & {
           // on long-lived tabs.
           return next.length > 500 ? next.slice(next.length - 500) : next;
         });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
 
     return () => {
       if (!closed) {
-        try { ws.close(); } catch { /* ignore */ }
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
       }
       socketRef.current = null;
     };

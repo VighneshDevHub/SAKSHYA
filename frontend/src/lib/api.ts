@@ -4,6 +4,7 @@ import type {
   CaseStatus,
   CaseSummary,
   DeviceCreateIn,
+  DeviceDetectionOut,
   DeviceOut,
   DeviceUpdateIn,
   EvidenceFileListOut,
@@ -32,7 +33,7 @@ import type {
   UserSummaryOut,
   VerificationResult,
 } from "./types";
-import { getToken } from "./auth";
+import { clearSession, getToken } from "./auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -51,15 +52,21 @@ async function fetchJson<T>(
     rawResponse?: boolean;
   } = {},
 ): Promise<T> {
-  const { method = "GET", requireAuth = false, body, headers, rawResponse = false } = options;
-  const mergedHeaders: HeadersInit = { ...(headers ?? {}) };
+  const {
+    method = "GET",
+    requireAuth = false,
+    body,
+    headers,
+    rawResponse = false,
+  } = options;
+  const mergedHeaders = new Headers(headers);
   if (requireAuth) {
     const token = getToken();
     if (!token) throw new UnauthorizedError("Not logged in");
-    mergedHeaders["Authorization" as string] = `Bearer ${token}`;
+    mergedHeaders.set("Authorization", `Bearer ${token}`);
   }
   if (body !== undefined && !(body instanceof FormData)) {
-    mergedHeaders["Content-Type" as string] = "application/json";
+    mergedHeaders.set("Content-Type", "application/json");
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -74,21 +81,30 @@ async function fetchJson<T>(
           : JSON.stringify(body),
   });
   if (res.status === 404) throw new NotFoundError(`Not found: ${path}`);
-  if (res.status === 401) throw new UnauthorizedError("Session expired, please sign in again");
+  if (res.status === 401) {
+    clearSession();
+    throw new UnauthorizedError("Session expired, please sign in again");
+  }
   if (res.status === 403) throw new ForbiddenError(`Forbidden: ${path}`);
   if (res.status === 409) throw new ConflictError(`Conflict: ${path}`);
-  if (!res.ok) throw new Error(`Request to ${path} failed with status ${res.status}`);
+  if (!res.ok)
+    throw new Error(`Request to ${path} failed with status ${res.status}`);
   if (rawResponse) return res as unknown as T;
   return res.json() as Promise<T>;
 }
 
-function buildQuery(params: Record<string, string | number | boolean | null | undefined>): string {
+function buildQuery(
+  params: Record<string, string | number | boolean | null | undefined>,
+): string {
   const entries = Object.entries(params).filter(
     ([, v]) => v !== undefined && v !== null && v !== "",
   );
   if (!entries.length) return "";
   const qs = entries
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v ?? ""))}`)
+    .map(
+      ([k, v]) =>
+        `${encodeURIComponent(k)}=${encodeURIComponent(String(v ?? ""))}`,
+    )
     .join("&");
   return `?${qs}`;
 }
@@ -97,16 +113,22 @@ function buildQuery(params: Record<string, string | number | boolean | null | un
 // SECTION 1 — existing (legacy) wrappers preserved verbatim (no changes)
 // ========================================================================
 
-export async function getOperation(certificateId: string): Promise<OperationRecord> {
+export async function getOperation(
+  certificateId: string,
+): Promise<OperationRecord> {
   return fetchJson<OperationRecord>(`/api/v1/operations/${certificateId}`);
 }
 
-export async function verifyOperation(certificateId: string): Promise<VerificationResult> {
+export async function verifyOperation(
+  certificateId: string,
+): Promise<VerificationResult> {
   return fetchJson<VerificationResult>(`/api/v1/verify/${certificateId}`);
 }
 
 export async function listOperations(): Promise<OperationRecord[]> {
-  return fetchJson<OperationRecord[]>(`/api/v1/operations`, { requireAuth: true });
+  return fetchJson<OperationRecord[]>(`/api/v1/operations`, {
+    requireAuth: true,
+  });
 }
 
 export function getOperationPdfUrl(certificateId: string): string {
@@ -118,7 +140,9 @@ export async function listCases(): Promise<CaseSummary[]> {
 }
 
 export async function getCase(caseId: string): Promise<CaseDetail> {
-  return fetchJson<CaseDetail>(`/api/v1/cases/${caseId}`, { requireAuth: true });
+  return fetchJson<CaseDetail>(`/api/v1/cases/${caseId}`, {
+    requireAuth: true,
+  });
 }
 
 export async function createCase(payload: {
@@ -133,7 +157,10 @@ export async function createCase(payload: {
   });
 }
 
-export async function assignInvestigator(caseId: string, investigatorEmail: string): Promise<CaseDetail> {
+export async function assignInvestigator(
+  caseId: string,
+  investigatorEmail: string,
+): Promise<CaseDetail> {
   return fetchJson<CaseDetail>(`/api/v1/cases/${caseId}/assign`, {
     method: "POST",
     requireAuth: true,
@@ -157,7 +184,10 @@ export async function addCaseEvidence(
   });
 }
 
-export async function linkCaseOperation(caseId: string, certificateId: string): Promise<CaseDetail> {
+export async function linkCaseOperation(
+  caseId: string,
+  certificateId: string,
+): Promise<CaseDetail> {
   return fetchJson<CaseDetail>(`/api/v1/cases/${caseId}/operations`, {
     method: "POST",
     requireAuth: true,
@@ -165,7 +195,10 @@ export async function linkCaseOperation(caseId: string, certificateId: string): 
   });
 }
 
-export async function updateCaseStatus(caseId: string, status: CaseStatus): Promise<CaseDetail> {
+export async function updateCaseStatus(
+  caseId: string,
+  status: CaseStatus,
+): Promise<CaseDetail> {
   return fetchJson<CaseDetail>(`/api/v1/cases/${caseId}/status`, {
     method: "POST",
     requireAuth: true,
@@ -187,10 +220,15 @@ export async function listUsers(params?: {
     limit: params?.limit,
     offset: params?.offset,
   });
-  return fetchJson<UserSummaryOut[]>(`/api/v1/users${qs}`, { requireAuth: true });
+  return fetchJson<UserSummaryOut[]>(`/api/v1/users${qs}`, {
+    requireAuth: true,
+  });
 }
 
-export async function updateUserRole(userId: string, role: UserRole): Promise<UserSummaryOut> {
+export async function updateUserRole(
+  userId: string,
+  role: UserRole,
+): Promise<UserSummaryOut> {
   const payload: UserRoleUpdateIn = { role };
   return fetchJson<UserSummaryOut>(`/api/v1/users/${userId}/role`, {
     method: "PATCH",
@@ -221,10 +259,14 @@ export async function listDevices(params?: {
 }
 
 export async function getDevice(deviceId: string): Promise<DeviceOut> {
-  return fetchJson<DeviceOut>(`/api/v1/devices/${deviceId}`, { requireAuth: true });
+  return fetchJson<DeviceOut>(`/api/v1/devices/${deviceId}`, {
+    requireAuth: true,
+  });
 }
 
-export async function createDevice(payload: DeviceCreateIn): Promise<DeviceOut> {
+export async function createDevice(
+  payload: DeviceCreateIn,
+): Promise<DeviceOut> {
   return fetchJson<DeviceOut>(`/api/v1/devices`, {
     method: "POST",
     requireAuth: true,
@@ -232,7 +274,17 @@ export async function createDevice(payload: DeviceCreateIn): Promise<DeviceOut> 
   });
 }
 
-export async function updateDevice(deviceId: string, payload: DeviceUpdateIn): Promise<DeviceOut> {
+export async function detectDevices(): Promise<DeviceDetectionOut> {
+  return fetchJson<DeviceDetectionOut>(`/api/v1/devices/detect`, {
+    method: "POST",
+    requireAuth: true,
+  });
+}
+
+export async function updateDevice(
+  deviceId: string,
+  payload: DeviceUpdateIn,
+): Promise<DeviceOut> {
   return fetchJson<DeviceOut>(`/api/v1/devices/${deviceId}`, {
     method: "PATCH",
     requireAuth: true,
@@ -299,17 +351,26 @@ export async function listNotifications(params?: {
     unread_only: params?.unread_only,
     limit: params?.limit,
   });
-  return fetchJson<NotificationListOut>(`/api/v1/notifications${qs}`, { requireAuth: true });
-}
-
-export async function markNotificationRead(notificationId: string): Promise<NotificationOut> {
-  return fetchJson<NotificationOut>(`/api/v1/notifications/${notificationId}/read`, {
-    method: "PATCH",
+  return fetchJson<NotificationListOut>(`/api/v1/notifications${qs}`, {
     requireAuth: true,
   });
 }
 
-export async function markAllNotificationsRead(): Promise<{ marked_read: number }> {
+export async function markNotificationRead(
+  notificationId: string,
+): Promise<NotificationOut> {
+  return fetchJson<NotificationOut>(
+    `/api/v1/notifications/${notificationId}/read`,
+    {
+      method: "PATCH",
+      requireAuth: true,
+    },
+  );
+}
+
+export async function markAllNotificationsRead(): Promise<{
+  marked_read: number;
+}> {
   return fetchJson<{ marked_read: number }>(`/api/v1/notifications/read-all`, {
     method: "POST",
     requireAuth: true,
@@ -318,8 +379,12 @@ export async function markAllNotificationsRead(): Promise<{ marked_read: number 
 
 // --- case timeline -------------------------------------------------------
 
-export async function getCaseTimeline(caseId: string): Promise<TimelineEventOut[]> {
-  return fetchJson<TimelineEventOut[]>(`/api/v1/cases/${caseId}/timeline`, { requireAuth: true });
+export async function getCaseTimeline(
+  caseId: string,
+): Promise<TimelineEventOut[]> {
+  return fetchJson<TimelineEventOut[]>(`/api/v1/cases/${caseId}/timeline`, {
+    requireAuth: true,
+  });
 }
 
 export async function createCaseTimelineNote(
@@ -340,9 +405,12 @@ export async function listEvidenceFiles(
   type: "image" | "video" | "document" | "archive" | "all" = "all",
 ): Promise<EvidenceFileListOut> {
   const qs = buildQuery({ type });
-  return fetchJson<EvidenceFileListOut>(`/api/v1/evidence/${evidenceId}/files${qs}`, {
-    requireAuth: true,
-  });
+  return fetchJson<EvidenceFileListOut>(
+    `/api/v1/evidence/${evidenceId}/files${qs}`,
+    {
+      requireAuth: true,
+    },
+  );
 }
 
 // --- hash-chain ledger ---------------------------------------------------
@@ -355,12 +423,16 @@ export async function getLedgerChain(params?: {
     from_seq: params?.from_seq,
     to_seq: params?.to_seq,
   });
-  return fetchJson<LedgerBlock[]>(`/api/v1/ledger/chain${qs}`, { requireAuth: true });
+  return fetchJson<LedgerBlock[]>(`/api/v1/ledger/chain${qs}`, {
+    requireAuth: true,
+  });
 }
 
 export async function verifyLedgerSeq(seq: number): Promise<LedgerVerifyOut> {
   const qs = buildQuery({ seq });
-  return fetchJson<LedgerVerifyOut>(`/api/v1/ledger/chain/verify${qs}`, { requireAuth: true });
+  return fetchJson<LedgerVerifyOut>(`/api/v1/ledger/chain/verify${qs}`, {
+    requireAuth: true,
+  });
 }
 
 // --- analytics -----------------------------------------------------------
@@ -380,7 +452,9 @@ export async function getAnalyticsTimeseries(params: {
     metric: params.metric,
     range: params.range,
   });
-  return fetchJson<TimeseriesPoint[]>(`/api/v1/analytics/timeseries${qs}`, { requireAuth: true });
+  return fetchJson<TimeseriesPoint[]>(`/api/v1/analytics/timeseries${qs}`, {
+    requireAuth: true,
+  });
 }
 
 // --- universal search ----------------------------------------------------
@@ -430,7 +504,9 @@ export async function listCertificatesReport(params?: {
     limit: params?.limit,
     offset: params?.offset,
   });
-  return fetchJson<ReportListOut>(`/api/v1/reports/certificates${qs}`, { requireAuth: true });
+  return fetchJson<ReportListOut>(`/api/v1/reports/certificates${qs}`, {
+    requireAuth: true,
+  });
 }
 
 export async function listRecoveryReport(params?: {
@@ -449,7 +525,9 @@ export async function listRecoveryReport(params?: {
     limit: params?.limit,
     offset: params?.offset,
   });
-  return fetchJson<ReportListOut>(`/api/v1/reports/recovery${qs}`, { requireAuth: true });
+  return fetchJson<ReportListOut>(`/api/v1/reports/recovery${qs}`, {
+    requireAuth: true,
+  });
 }
 
 export async function listAuditReport(params?: {
@@ -468,7 +546,9 @@ export async function listAuditReport(params?: {
     limit: params?.limit,
     offset: params?.offset,
   });
-  return fetchJson<ReportListOut>(`/api/v1/reports/audit${qs}`, { requireAuth: true });
+  return fetchJson<ReportListOut>(`/api/v1/reports/audit${qs}`, {
+    requireAuth: true,
+  });
 }
 
 export async function listMonthlyReport(params?: {
@@ -479,7 +559,9 @@ export async function listMonthlyReport(params?: {
     year: params?.year,
     month: params?.month,
   });
-  return fetchJson<MonthlyReportOut>(`/api/v1/reports/monthly${qs}`, { requireAuth: true });
+  return fetchJson<MonthlyReportOut>(`/api/v1/reports/monthly${qs}`, {
+    requireAuth: true,
+  });
 }
 
 export function getCertificateReportPdfUrl(certificateId: string): string {
@@ -507,7 +589,9 @@ export async function getSettings(): Promise<AppSettings> {
   return fetchJson<AppSettings>(`/api/v1/settings`, { requireAuth: true });
 }
 
-export async function patchSettings(payload: SettingsPatchIn): Promise<AppSettings> {
+export async function patchSettings(
+  payload: SettingsPatchIn,
+): Promise<AppSettings> {
   return fetchJson<AppSettings>(`/api/v1/settings`, {
     method: "PATCH",
     requireAuth: true,
@@ -529,7 +613,9 @@ export async function listSystemLogs(params?: {
     limit: params?.limit,
     offset: params?.offset,
   });
-  return fetchJson<SystemLogListOut>(`/api/v1/system-logs${qs}`, { requireAuth: true });
+  return fetchJson<SystemLogListOut>(`/api/v1/system-logs${qs}`, {
+    requireAuth: true,
+  });
 }
 
 // --- public (landing page) -----------------------------------------------

@@ -3,7 +3,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ForensicGuard — Secure Erasure & Recovery Platform",
+  title: "PRAMAAN — Secure Erasure & Recovery Platform",
   description: "Integrated secure data erasure and forensic file recovery",
 };
 

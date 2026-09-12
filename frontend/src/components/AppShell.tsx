@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getStoredEmail, logout, getToken } from "@/lib/auth";
+import { getStoredEmail, getStoredRole, logout, getToken } from "@/lib/auth";
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api";
 import { useTheme } from "@/components/ThemeProvider";
 import type { NotificationListOut, NotificationOut, UserRole } from "@/lib/types";
@@ -111,6 +111,12 @@ const I = {
       <path d="m9 12 2 2 4-4" />
     </svg>
   ),
+  Book: (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" />
+      <path d="M4 5.5V22M8 7h8M8 11h8" />
+    </svg>
+  ),
 };
 
 // -- Role label helpers -------------------------------------------------
@@ -210,6 +216,15 @@ export function AppShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [storedEmail, setStoredEmail] = useState<string | null>(null);
+  const [storedRole, setStoredRole] = useState<UserRole | string | undefined>(undefined);
+
+  useEffect(() => {
+    setStoredEmail(getStoredEmail());
+    setStoredRole(getStoredRole() ?? undefined);
+  }, [userId]);
+
+  const sessionRole = userRole ?? storedRole;
 
   // Pull notifications once on mount and keep state local.
   useEffect(() => {
@@ -267,9 +282,13 @@ export function AppShell({
       heading: "Operations",
       items: [
         { href: "/dashboard", label: "Dashboard", icon: I.Dashboard },
+        { href: "/dashboard/recovery", label: "Recovery Engine", icon: I.Folder, matchPrefix: false, roles: ["ADMINISTRATOR", "INVESTIGATOR", "SUPERVISOR"] },
+        { href: "/dashboard/file-eraser", label: "File / Folder Eraser", icon: I.FileText, matchPrefix: false, roles: ["ADMINISTRATOR", "INVESTIGATOR", "SUPERVISOR"] },
+        { href: "/dashboard/drive-eraser", label: "Drive Eraser", icon: I.Drive, matchPrefix: false, roles: ["ADMINISTRATOR", "INVESTIGATOR", "SUPERVISOR"] },
         { href: "/dashboard/jobs", label: "Task Queue", icon: I.Clipboard, roles: ["ADMINISTRATOR", "INVESTIGATOR", "SUPERVISOR", "AUDITOR"] },
         { href: "/dashboard/devices", label: "Device Inventory", icon: I.Drive },
         { href: "/dashboard/cases", label: "Cases", icon: I.Folder },
+        { href: "/dashboard/manual", label: "User Manual", icon: I.Book },
       ],
     },
     {
@@ -283,7 +302,7 @@ export function AppShell({
     {
       heading: "Administration",
       items: [
-        { href: "/dashboard/users", label: "Operators", icon: I.Users, roles: ["ADMINISTRATOR", "SUPERVISOR"] },
+        { href: "/dashboard/users", label: "Operators", icon: I.Users, roles: ["ADMINISTRATOR"] },
         { href: "/dashboard/system-logs", label: "System Logs", icon: I.ListLogs, roles: ["ADMINISTRATOR", "AUDITOR", "SUPERVISOR"] },
         { href: "/dashboard/settings", label: "Settings", icon: I.Cog, roles: ["ADMINISTRATOR"] },
       ],
@@ -292,8 +311,8 @@ export function AppShell({
 
   function isVisible(roles?: UserRole[]): boolean {
     if (!roles) return true;
-    if (!userRole) return true; // If role not known yet, show all.
-    return roles.includes(userRole as UserRole);
+    if (!sessionRole) return true; // Keep legacy sessions usable until re-login.
+    return roles.includes(sessionRole as UserRole);
   }
 
   function isActive(href: string): boolean {
@@ -301,7 +320,7 @@ export function AppShell({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  const email = getStoredEmail();
+  const email = storedEmail;
 
   return (
     <div className="flex min-h-screen flex-col bg-page">
@@ -322,17 +341,17 @@ export function AppShell({
         <Link
           href="/dashboard"
           className="flex shrink-0 items-center gap-2 text-govt-navy"
-          aria-label="ForensicGuard home"
+            aria-label="PRAMAAN home"
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-govt-navy text-white shadow-card">
-            {I.Shield}
+          <span className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm bg-white shadow-card">
+            <img src="/pramaan-logo.svg" alt="PRAMAAN logo" className="h-full w-full object-cover" />
           </span>
           <div className="leading-tight">
             <div className="font-display text-[15px] font-bold tracking-tight">
-              ForensicGuard
+              PRAMAAN
             </div>
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-              NTRO · DFU Platform
+              NTRO · Digital Forensics Platform
             </div>
           </div>
         </Link>
@@ -357,10 +376,8 @@ export function AppShell({
         </form>
 
         <div className="ml-auto flex items-center gap-1">
-          {/* Theme toggle */}
           <button
             type="button"
-            onClick={toggleTheme}
             className="fg-btn-ghost !p-2"
             aria-label={theme === "govt-light" ? "Switch to dark mode" : "Switch to light mode"}
             title={theme === "govt-light" ? "Switch to dark mode" : "Switch to light mode"}
@@ -442,7 +459,7 @@ export function AppShell({
             </div>
             <div className="leading-tight">
               <div className="text-xs font-medium">{email ?? "Operator"}</div>
-              {userRole && <div className="mt-0.5"><RoleBadge role={userRole} /></div>}
+              {sessionRole && <div className="mt-0.5"><RoleBadge role={sessionRole} /></div>}
             </div>
             <button
               type="button"
@@ -493,7 +510,7 @@ export function AppShell({
           <div className="flex-1 overflow-y-auto pb-6">
             <div className="px-2 pb-4 pt-1">
               <p className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                ForensicGuard Console
+                PRAMAAN Console
               </p>
             </div>
             <nav>

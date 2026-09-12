@@ -190,6 +190,12 @@ export interface DeviceOut {
   updated_at: string;
 }
 
+export interface DeviceDetectionOut {
+  platform: string;
+  detected_count: number;
+  devices: DeviceOut[];
+}
+
 // --- jobs / task queue ---------------------------------------------------
 export type TaskStatus =
   | "PENDING"
@@ -355,6 +361,11 @@ export interface AnalyticsSummary {
   failure_rate_pct: number;
   storage_sanitized_bytes: number;
   top_investigators_by_ops: TopInvestigator[];
+  ops_by_type?: Record<string, number>;
+  device_health_breakdown?: Record<string, number>;
+  device_status_breakdown?: Record<string, number>;
+  ledger_blocks_count?: number;
+  ledger_integrity_pct?: number;
 }
 
 export interface TimeseriesPoint {

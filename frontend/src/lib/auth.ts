@@ -1,7 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const TOKEN_KEY = "forensicguard_token";
 const EMAIL_KEY = "forensicguard_email";
-const ROLE_KEY  = "forensicguard_role";
+const ROLE_KEY = "forensicguard_role";
 const USER_ID_KEY = "forensicguard_user_id";
 
 export function getToken(): string | null {
@@ -24,10 +24,15 @@ export function getStoredUserId(): string | null {
   return localStorage.getItem(USER_ID_KEY);
 }
 
-function setSession(token: string, email: string, role?: string, userId?: string): void {
+function setSession(
+  token: string,
+  email: string,
+  role?: string,
+  userId?: string,
+): void {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(EMAIL_KEY, email);
-  if (role)   localStorage.setItem(ROLE_KEY, role);
+  if (role) localStorage.setItem(ROLE_KEY, role);
   if (userId) localStorage.setItem(USER_ID_KEY, userId);
 }
 
@@ -40,31 +45,66 @@ export function clearSession(): void {
 
 export class AuthError extends Error {}
 
+async function authErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      detail?: string | Array<{ msg?: string }>;
+    };
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail) && data.detail.length > 0) {
+      return data.detail.map((item) => item.msg ?? "Invalid value").join("; ");
+    }
+  } catch {
+    // Use the stable fallback when the server returns a non-JSON error.
+  }
+  return fallback;
+}
+
 export async function login(email: string, password: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.trim(), password }),
   });
   if (!res.ok) {
-    throw new AuthError("Incorrect email or password");
+    throw new AuthError(
+      await authErrorMessage(res, "Incorrect email or password"),
+    );
   }
   const data = await res.json();
   // data.role and data.user_id are returned by the backend TokenResponse schema
-  setSession(data.access_token, email, data.role ?? undefined, data.user_id ?? undefined);
+  setSession(
+    data.access_token,
+    email,
+    data.role ?? undefined,
+    data.user_id ?? undefined,
+  );
 }
 
-export async function register(email: string, password: string): Promise<void> {
+export async function register(
+  email: string,
+  password: string,
+  role:
+    | "ADMINISTRATOR"
+    | "INVESTIGATOR"
+    | "AUDITOR"
+    | "SUPERVISOR" = "INVESTIGATOR",
+): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.trim(), password, role }),
   });
   if (res.status === 409) {
-    throw new AuthError("An account with this email already exists — try signing in instead.");
+    throw new AuthError(
+      "An account with this email already exists — try signing in instead.",
+    );
   }
   if (!res.ok) {
-    throw new AuthError("Registration failed");
+    throw new AuthError(await authErrorMessage(res, "Registration failed"));
   }
 }
 
