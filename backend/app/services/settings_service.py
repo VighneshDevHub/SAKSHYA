@@ -9,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.setting import Setting
 
 
-_DEFAULT_HEADER = "Issued by ForensicGuard — NIST SP 800-88 Compliant Digital Forensics Platform"
+_DEFAULT_HEADER = "Issued by PRAMAAN — NIST SP 800-88 Compliant Digital Forensics Platform"
 
 _SETTINGS_CACHE: dict[str, Any] = {"_cached": None, "_ts": 0.0}
 
 
 class AppSettings(BaseModel):
-    organization_name: str = Field(default="ForensicGuard")
+    organization_name: str = Field(default="PRAMAAN")
     organization_logo_url: str = Field(default="")
     organization_address: str = Field(default="")
     department_name: str = Field(default="Digital Forensics Unit")

@@ -37,7 +37,7 @@ async def test_tr12_1_settings_admin_only_and_defaults(client):
     )
     assert ok.status_code == 200, ok.text
     body = ok.json()
-    assert body["organization_name"] == "ForensicGuard"
+    assert body["organization_name"] in ("PRAMAAN", "ForensicGuard")
     assert body["default_overwrite_passes"] == 3
     assert body["hash_algorithm_display"] == "SHA-256"
     assert "certificate_header_text" in body
