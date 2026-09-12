@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   getAnalyticsSummary,
   getAnalyticsTimeseries,
-  getJob as getJobApi,
   listJobs,
   UnauthorizedError,
 } from "@/lib/api";
@@ -20,21 +19,17 @@ import type {
   TopInvestigator,
 } from "@/lib/types";
 import { useJobSocket } from "@/lib/ws";
+import {
+  bytesHuman,
+  pct,
+  InteractiveLineChart,
+  OperationTypeDonut,
+  IntegrityGauge,
+  DataVolumeBarChart,
+  DeviceStatusMatrix,
+} from "@/components/dashboard/DashboardCharts";
 
 // ---- helpers ---------------------------------------------------------------
-
-function bytesHuman(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  const v = n / Math.pow(1024, i);
-  return `${v.toFixed(v < 10 && i > 0 ? 2 : 1)} ${units[i]}`;
-}
-
-function pct(n: number): string {
-  if (!Number.isFinite(n)) return "0.00%";
-  return `${n.toFixed(2)}%`;
-}
 
 function statusBadge(s: TaskStatus): { label: string; cls: string } {
   switch (s) {
@@ -74,7 +69,7 @@ const ACCENT_HEADER: Record<StatCardDef["accent"], string> = {
 
 function StatCard({ card }: { card: StatCardDef }) {
   return (
-    <div className="fg-panel overflow-hidden">
+    <div className="fg-panel overflow-hidden transition-all hover:shadow-md">
       <div className={`px-5 py-2 font-mono text-[10px] uppercase tracking-[0.2em] ${ACCENT_HEADER[card.accent]}`}>
         {card.label}
       </div>
@@ -90,154 +85,17 @@ function StatCard({ card }: { card: StatCardDef }) {
   );
 }
 
-// ---- SVG line chart (zero deps, government style — solid stroke, no gradients)
-
-function LineChart({
-  data,
-  title,
-}: {
-  data: TimeseriesPoint[];
-  title: string;
-}) {
-  const width = 720;
-  const height = 260;
-  const padding = { l: 44, r: 16, t: 22, b: 30 };
-  const innerW = width - padding.l - padding.r;
-  const innerH = height - padding.t - padding.b;
-
-  const values = data.map((d) => Number(d.value ?? 0));
-  const maxV = Math.max(1, ...values);
-
-  const stepX = data.length > 1 ? innerW / (data.length - 1) : 0;
-
-  const points = data.map((d, i) => {
-    const x = padding.l + stepX * i;
-    const y = padding.t + innerH - (values[i] / maxV) * innerH;
-    return { x, y, label: d.date, value: values[i] };
-  });
-
-  const path = points.length
-    ? points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
-    : "";
-
-  const area = points.length > 1
-    ? `${path} L${points[points.length - 1].x.toFixed(2)},${(padding.t + innerH).toFixed(2)} L${points[0].x.toFixed(2)},${(padding.t + innerH).toFixed(2)} Z`
-    : "";
-
-  const yTicks = 4;
-  const ticks = Array.from({ length: yTicks + 1 }, (_, i) => {
-    const v = (maxV * i) / yTicks;
-    return { v, y: padding.t + innerH - (i / yTicks) * innerH };
-  });
-
-  const xLabelEvery = Math.max(1, Math.ceil(data.length / 7));
-
-  return (
-    <div className="fg-panel">
-      <div className="fg-panel-header">
-        <div className="fg-panel-title">{title}</div>
-        <div className="text-xs text-muted">
-          Rolling {data.length}d · {new Date().toLocaleDateString()}
-        </div>
-      </div>
-      <div className="p-4 md:p-5">
-        {!data.length ? (
-          <div className="flex h-[260px] items-center justify-center text-sm text-muted">
-            No activity recorded yet.
-          </div>
-        ) : (
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            className="h-[260px] w-full"
-            role="img"
-            aria-label={`${title} line chart`}
-          >
-            {/* gridlines */}
-            {ticks.map((t, i) => (
-              <g key={i}>
-                <line
-                  x1={padding.l}
-                  x2={padding.l + innerW}
-                  y1={t.y}
-                  y2={t.y}
-                  stroke="rgb(var(--fg-line))"
-                  strokeDasharray={i === yTicks ? "" : "3 5"}
-                />
-                <text
-                  x={padding.l - 8}
-                  y={t.y + 3}
-                  textAnchor="end"
-                  className="fill-muted"
-                  fontSize="10"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-                >
-                  {t.v.toFixed(0)}
-                </text>
-              </g>
-            ))}
-            {/* area fill (very subtle) */}
-            {area && (
-              <path d={area} fill="rgb(var(--fg-royal))" fillOpacity={0.08} />
-            )}
-            {/* line */}
-            {path && (
-              <path
-                d={path}
-                fill="none"
-                stroke="rgb(var(--fg-royal))"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-            {/* points */}
-            {points.map((p, i) => (
-              <circle
-                key={i}
-                cx={p.x}
-                cy={p.y}
-                r={points.length <= 30 ? 2 : 1.6}
-                fill="rgb(var(--fg-royal))"
-              >
-                <title>
-                  {p.label}: {p.value}
-                </title>
-              </circle>
-            ))}
-            {/* x-axis labels */}
-            {points.map((p, i) =>
-              i % xLabelEvery === 0 || i === points.length - 1 ? (
-                <text
-                  key={i}
-                  x={p.x}
-                  y={padding.t + innerH + 18}
-                  textAnchor="middle"
-                  className="fill-muted"
-                  fontSize="10"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-                >
-                  {p.label.slice(5)}
-                </text>
-              ) : null,
-            )}
-          </svg>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ---- Top investigators + recent jobs ---------------------------------------
 
 function TopInvestigators({ items }: { items: TopInvestigator[] }) {
   const max = Math.max(1, ...items.map((i) => i.count));
   return (
-    <div className="fg-panel">
+    <div className="fg-panel h-full flex flex-col justify-between">
       <div className="fg-panel-header">
         <div className="fg-panel-title">Top Investigators</div>
         <div className="text-xs text-muted">By operations completed</div>
       </div>
-      <div className="divide-y divide-line">
+      <div className="divide-y divide-line flex-1">
         {items.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm text-muted">
             No investigators have recorded operations yet.
@@ -264,7 +122,7 @@ function TopInvestigators({ items }: { items: TopInvestigator[] }) {
                   />
                 </div>
               </div>
-              <div className="text-right font-mono text-sm text-main">
+              <div className="text-right font-mono text-sm text-main font-semibold">
                 {inv.count}
               </div>
             </div>
@@ -278,8 +136,6 @@ function TopInvestigators({ items }: { items: TopInvestigator[] }) {
 function RecentJobsList({ jobs: initialJobs }: { jobs: JobOut[] }) {
   const [jobs, setJobs] = useState<JobOut[]>(initialJobs);
 
-  // Apply live WS updates to the first job we have (if any) so the
-  // dashboard shows real-time progress for the most recent one.
   const latestId = jobs[0]?.id ?? null;
   const { lastEvent } = useJobSocket(latestId);
 
@@ -304,9 +160,9 @@ function RecentJobsList({ jobs: initialJobs }: { jobs: JobOut[] }) {
   return (
     <div className="fg-panel">
       <div className="fg-panel-header">
-        <div className="fg-panel-title">Recent Jobs</div>
-        <Link href="/dashboard/jobs" className="text-xs font-medium text-govt-blue hover:underline">
-          View all →
+        <div className="fg-panel-title">Recent Jobs & Live Activity Queue</div>
+        <Link href="/dashboard/jobs" className="text-xs font-medium text-govt-blue hover:underline flex items-center gap-1">
+          View all jobs →
         </Link>
       </div>
       {jobs.length === 0 ? (
@@ -315,13 +171,13 @@ function RecentJobsList({ jobs: initialJobs }: { jobs: JobOut[] }) {
         </div>
       ) : (
         <div className="divide-y divide-line">
-          {jobs.slice(0, 8).map((j) => {
+          {jobs.slice(0, 6).map((j) => {
             const badge = statusBadge(j.status);
             return (
               <Link
                 key={j.id}
                 href={`/dashboard/jobs/${j.id}`}
-                className="block px-5 py-3 hover:bg-field/60"
+                className="block px-5 py-3.5 hover:bg-field/70 transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -331,20 +187,20 @@ function RecentJobsList({ jobs: initialJobs }: { jobs: JobOut[] }) {
                         {j.job_number}
                       </span>
                     </div>
-                    <div className="mt-1 truncate text-sm text-main">
+                    <div className="mt-1 truncate text-sm font-medium text-main">
                       {j.title || `${j.operation_type} job`}
                     </div>
                     <div className="mt-1 line-clamp-1 font-mono text-[11px] text-muted">
-                      {j.stage || j.message || new Date(j.created_at).toLocaleString()}
+                      {j.stage || j.message || new Date(j.created_at).toISOString()}
                     </div>
                   </div>
-                  <div className="w-32 shrink-0 text-right">
-                    <div className="font-mono text-xs text-main">
+                  <div className="w-36 shrink-0 text-right">
+                    <div className="font-mono text-xs font-semibold text-main">
                       {j.progress_percent}%
                     </div>
-                    <div className="mt-1 fg-progress-track h-1.5">
+                    <div className="mt-1.5 fg-progress-track h-2 rounded-xs overflow-hidden">
                       <div
-                        className="fg-progress-fill"
+                        className="fg-progress-fill transition-all duration-300"
                         style={{ width: `${j.progress_percent}%` }}
                       />
                     </div>
@@ -359,7 +215,73 @@ function RecentJobsList({ jobs: initialJobs }: { jobs: JobOut[] }) {
   );
 }
 
-// ---- Page ------------------------------------------------------------------
+type ModuleCardProps = {
+  code: string;
+  title: string;
+  description: string;
+  accent: string;
+  href: string;
+  action: string;
+  jobs: JobOut[];
+  capabilities: string[];
+};
+
+function ModuleCard({
+  code,
+  title,
+  description,
+  accent,
+  href,
+  action,
+  jobs,
+  capabilities,
+}: ModuleCardProps) {
+  const activeJobs = jobs.filter(
+    (job) => job.status === "PENDING" || job.status === "CLAIMED" || job.status === "RUNNING",
+  ).length;
+  const completedJobs = jobs.filter((job) => job.status === "COMPLETED").length;
+
+  return (
+    <article className="fg-panel flex h-full flex-col overflow-hidden transition-all hover:border-govt-navy/40">
+      <div className={`h-1.5 ${accent}`} />
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted">{code}</div>
+            <h3 className="mt-2 font-display text-xl font-semibold text-main">{title}</h3>
+          </div>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-line bg-field font-mono text-xs text-muted">
+            {String(activeJobs).padStart(2, "0")}
+          </span>
+        </div>
+        <p className="mt-3 min-h-[3.5rem] text-sm leading-relaxed text-muted">{description}</p>
+        <div className="mt-5 grid grid-cols-2 gap-2 border-y border-line py-3">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted">Active</div>
+            <div className="mt-1 font-display text-lg font-semibold text-main">{activeJobs}</div>
+          </div>
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted">Completed</div>
+            <div className="mt-1 font-display text-lg font-semibold text-main">{completedJobs}</div>
+          </div>
+        </div>
+        <ul className="mt-4 grid gap-2 text-xs text-muted sm:grid-cols-2">
+          {capabilities.map((capability) => (
+            <li key={capability} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-govt-gold" />
+              {capability}
+            </li>
+          ))}
+        </ul>
+        <Link href={href} className="fg-btn-primary mt-6 w-full justify-center">
+          {action} <span aria-hidden>→</span>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+// ---- Page Component ---------------------------------------------------------
 
 export default function DashboardHome() {
   const router = useRouter();
@@ -449,7 +371,7 @@ export default function DashboardHome() {
     <AppShell
       eyebrow="Command Console"
       title="Dashboard"
-      subtitle="Platform operations summary, real-time task queue activity, investigator performance, and forensic integrity health."
+      subtitle="Platform operations telemetry, interactive analytical distributions, cryptographic ledger health, and task queue monitoring."
     >
       {err && (
         <div className="mb-6 rounded-md border border-govt-red/30 bg-govt-redLight px-4 py-3 text-sm text-govt-red">
@@ -469,54 +391,84 @@ export default function DashboardHome() {
         </div>
       </section>
 
-      {/* Chart + quick actions */}
-      <section className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-3">
+      {/* Graphical Data Visualizations Grid 1: Interactive Line Chart + Module Donut */}
+      <section aria-labelledby="visualizations-heading" className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <h2 id="visualizations-heading" className="sr-only">
+          Analytics & Visual Data
+        </h2>
         <div className="lg:col-span-2">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5">
-              {(
-                [
-                  { k: "operations", l: "All operations" },
-                  { k: "successes", l: "Successes" },
-                  { k: "failures", l: "Failures" },
-                  { k: "recoveries", l: "Recoveries" },
-                  { k: "erases", l: "Erasures" },
-                ] as const
-              ).map((opt) => {
-                const active = metric === opt.k;
-                return (
-                  <button
-                    key={opt.k}
-                    type="button"
-                    onClick={() => setMetric(opt.k)}
-                    className={
-                      "text-xs px-2.5 py-1 rounded-sm border " +
-                      (active
-                        ? "border-govt-navy bg-govt-navy text-white"
-                        : "border-line bg-panel text-muted hover:text-main")
-                    }
-                  >
-                    {opt.l}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <LineChart
+          <InteractiveLineChart
             data={timeseries}
-            title="Operations trend — previous 30 days"
+            title="Operations Telemetry — Rolling 30-Day Trend"
+            currentMetric={metric}
+            onMetricChange={setMetric}
           />
         </div>
-
-        <TopInvestigators items={summary?.top_investigators_by_ops ?? []} />
+        <div>
+          <OperationTypeDonut summary={summary} />
+        </div>
       </section>
 
-      {/* Recent jobs */}
-      <section aria-labelledby="jobs-heading">
-        <h2 id="jobs-heading" className="sr-only">
-          Recent task queue jobs
-        </h2>
-        <RecentJobsList jobs={jobs} />
+      {/* Graphical Data Visualizations Grid 2: Integrity Gauge, Data Volume Bar, Fleet Matrix */}
+      <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <IntegrityGauge summary={summary} />
+        <DataVolumeBarChart summary={summary} />
+        <DeviceStatusMatrix summary={summary} />
+      </section>
+
+      {/* Modules section */}
+      <section aria-labelledby="modules-heading" className="mb-6">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted">Choose Module</div>
+            <h2 id="modules-heading" className="mt-1 font-display text-2xl font-semibold text-main">
+              Forensic operations
+            </h2>
+          </div>
+          <Link href="/dashboard/jobs" className="text-xs font-medium text-govt-blue hover:underline">
+            Open job queue →
+          </Link>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <ModuleCard
+            code="01 / RECOVERY"
+            title="Recovery Engine"
+            description="Carve, classify, verify, and preserve recovered files as case-linked evidence."
+            accent="bg-typeviolet"
+            href="/dashboard/recovery"
+            action="Start recovery job"
+            jobs={jobs.filter((job) => job.operation_type === "RECOVERY")}
+            capabilities={["Quick or deep scan", "Evidence integrity"]}
+          />
+          <ModuleCard
+            code="02 / FILE ERASE"
+            title="File & Folder Eraser"
+            description="Sanitise selected content with overwrite passes, metadata scrubbing, and verification."
+            accent="bg-amber"
+            href="/dashboard/file-eraser"
+            action="Start erase job"
+            jobs={jobs.filter((job) => job.operation_type === "FILE_ERASE")}
+            capabilities={["N-pass overwrite", "Free-space cleanse"]}
+          />
+          <ModuleCard
+            code="03 / DRIVE ERASE"
+            title="Drive Eraser"
+            description="Manage full-media sanitisation with device-aware methods and read-back verification."
+            accent="bg-typeblue"
+            href="/dashboard/drive-eraser"
+            action="Start drive wipe"
+            jobs={jobs.filter((job) => job.operation_type === "DRIVE_ERASE")}
+            capabilities={["Clear, purge, crypto", "Read-back verify"]}
+          />
+        </div>
+      </section>
+
+      {/* Top Investigators & Recent Jobs */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <TopInvestigators items={summary?.top_investigators_by_ops ?? []} />
+        <div className="lg:col-span-2">
+          <RecentJobsList jobs={jobs} />
+        </div>
       </section>
     </AppShell>
   );

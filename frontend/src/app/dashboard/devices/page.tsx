@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createDevice,
+  detectDevices,
   listDevices,
   UnauthorizedError,
   updateDevice,
 } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { getStoredRole, getToken } from "@/lib/auth";
 import type {
   DeviceConnectionType,
   DeviceCreateIn,
@@ -74,6 +76,9 @@ export default function DeviceInventoryPage() {
   const [rows, setRows] = useState<DeviceOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+  const [detectionMessage, setDetectionMessage] = useState<string | null>(null);
+  const [monitoring, setMonitoring] = useState(false);
 
   // filters
   const [fStatus, setFStatus] = useState<string>("");
@@ -113,6 +118,36 @@ export default function DeviceInventoryPage() {
       return;
     }
     void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  useEffect(() => {
+    if (!getToken()) return;
+
+    const role = getStoredRole();
+    const canDetect = role === "ADMINISTRATOR" || role === "INVESTIGATOR" || role === "SUPERVISOR";
+    let active = true;
+
+    async function monitorHost() {
+      if (!active) return;
+      setMonitoring(true);
+      try {
+        if (canDetect) {
+          await detectDevices();
+        }
+        await reload();
+      } catch {
+        // Monitoring is best-effort; the manual controls continue to expose errors.
+      } finally {
+        if (active) setMonitoring(false);
+      }
+    }
+
+    const interval = window.setInterval(() => void monitorHost(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -161,8 +196,31 @@ export default function DeviceInventoryPage() {
     }
   }
 
+  async function handleDetect() {
+    setDetecting(true);
+    setDetectionMessage(null);
+    setError(null);
+    try {
+      const result = await detectDevices();
+      setDetectionMessage(`${result.detected_count} host device${result.detected_count === 1 ? "" : "s"} detected and synchronized.`);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Automatic device detection failed");
+    } finally {
+      setDetecting(false);
+    }
+  }
+
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void handleDetect()}
+        className="fg-btn !py-1.5 !px-3 text-xs"
+        disabled={detecting}
+      >
+        {detecting ? "Detecting..." : "Detect Host Devices"}
+      </button>
       <button
         type="button"
         onClick={() => reload()}
@@ -193,6 +251,12 @@ export default function DeviceInventoryPage() {
         </div>
       )}
 
+      {detectionMessage && (
+        <div className="mb-6 rounded-md border border-govt-green/25 bg-govt-greenLight px-4 py-3 text-sm text-govt-green">
+          {detectionMessage}
+        </div>
+      )}
+
       {/* ========== FILTER STRIP ========== */}
       <div className="fg-panel mb-6 overflow-hidden">
         <div className="fg-panel-header">
@@ -200,6 +264,13 @@ export default function DeviceInventoryPage() {
           <div className="font-mono text-[11px] text-muted">
             {rows ? `${rows.length} devices` : "—"}
           </div>
+        </div>
+        <div className="flex items-center gap-2 border-b border-line bg-field/40 px-5 py-2.5 text-xs text-muted">
+          <span
+            className={`h-2 w-2 rounded-full ${monitoring ? "bg-govt-gold animate-pulse" : "bg-govt-green"}`}
+            aria-hidden="true"
+          />
+          Automatic host monitoring active · checks every 5 seconds
         </div>
         <form
           className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5"
@@ -256,6 +327,23 @@ export default function DeviceInventoryPage() {
           </div>
         </form>
       </div>
+
+      {rows && rows.length > 0 && (
+        <section aria-labelledby="connected-devices-heading" className="mb-6">
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted">Connected Devices</div>
+              <h2 id="connected-devices-heading" className="mt-1 font-display text-2xl font-semibold text-main">
+                Device command surface
+              </h2>
+            </div>
+            <span className="font-mono text-xs text-muted">{rows.length} detected</span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {rows.map((device) => <DeviceCard key={device.id} device={device} />)}
+          </div>
+        </section>
+      )}
 
       {/* ========== TABLE ========== */}
       <div className="fg-panel overflow-hidden">
@@ -353,6 +441,59 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="fg-label">{label}</span>
       {children}
     </label>
+  );
+}
+
+function DeviceCard({ device }: { device: DeviceOut }) {
+  const query = (operation: string) => operation === "RECOVERY"
+    ? `/dashboard/recovery?device=${encodeURIComponent(device.id)}`
+    : operation === "FILE_ERASE"
+      ? `/dashboard/file-eraser?device=${encodeURIComponent(device.id)}`
+      : `/dashboard/drive-eraser?device=${encodeURIComponent(device.id)}`;
+
+  return (
+    <article className="fg-panel overflow-hidden">
+      <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+        <div className="min-w-0">
+          <div className="truncate font-mono text-[11px] text-govt-blue">{device.serial_number}</div>
+          <h3 className="mt-1 truncate font-display text-lg font-semibold text-main">
+            {device.model || device.manufacturer || "Unidentified device"}
+          </h3>
+        </div>
+        <span className={STATUS_VARIANT[device.status]}>{device.status.replaceAll("_", " ")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
+        <div>
+          <div className="fg-label">Media</div>
+          <div className="mt-1 text-main">{device.media_type.replaceAll("_", " ")}</div>
+        </div>
+        <div>
+          <div className="fg-label">Capacity</div>
+          <div className="mt-1 font-mono text-xs text-main">{bytesHuman(device.capacity_bytes)}</div>
+        </div>
+        <div>
+          <div className="fg-label">Connection</div>
+          <div className="mt-1 text-main">{device.connection_type}</div>
+        </div>
+        <div>
+          <div className="fg-label">Health</div>
+          <div className="mt-1"><span className={HEALTH_VARIANT[device.health]}>{device.health}</span></div>
+        </div>
+      </div>
+      <div className="border-t border-line bg-field/40 px-5 py-3">
+        <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted">
+          Available actions
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href={query("RECOVERY")} className="fg-btn !px-2.5 !py-1 text-[11px]">Recover</Link>
+          <Link href={query("FILE_ERASE")} className="fg-btn !px-2.5 !py-1 text-[11px]">Erase folder</Link>
+          <Link href={query("DRIVE_ERASE")} className="fg-btn-primary !px-2.5 !py-1 text-[11px]">Erase drive</Link>
+          <button type="button" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })} className="fg-btn !px-2.5 !py-1 text-[11px]">
+            Timeline
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 

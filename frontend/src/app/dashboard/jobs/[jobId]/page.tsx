@@ -40,6 +40,49 @@ function DetailField({
   );
 }
 
+const OPERATION_STAGES: Record<string, string[]> = {
+  RECOVERY: ["QUEUED", "SCANNING", "CARVING", "CLASSIFYING", "VERIFYING", "COMPLETED"],
+  FILE_ERASE: ["QUEUED", "CLAIMED", "OVERWRITING", "SCRUBBING", "VERIFYING", "COMPLETED"],
+  DRIVE_ERASE: ["QUEUED", "CLAIMED", "DETECTING", "WIPING", "VERIFYING", "COMPLETED"],
+};
+
+function ExecutionRail({ job }: { job: JobOut }) {
+  const stages = OPERATION_STAGES[job.operation_type] ?? OPERATION_STAGES.RECOVERY;
+  const current = job.stage.toUpperCase();
+  const currentIndex = job.status === "FAILED" ? -1 : Math.max(0, stages.findIndex((stage) => current.includes(stage)));
+  return (
+    <div className="overflow-x-auto pb-1">
+      <ol className="flex min-w-[620px] items-start">
+        {stages.map((stage, index) => {
+          const complete = job.status === "COMPLETED" || (currentIndex >= 0 && index < currentIndex);
+          const active = job.status !== "COMPLETED" && index === currentIndex;
+          return (
+            <li key={stage} className="flex flex-1 items-start">
+              <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full border font-mono text-[10px] font-semibold ${complete ? "border-govt-green bg-govt-green text-white" : active ? "border-govt-navy bg-govt-navy text-white" : "border-line bg-field text-muted"}`}>
+                  {complete ? "OK" : String(index + 1).padStart(2, "0")}
+                </span>
+                <span className={`mt-2 text-[10px] font-semibold uppercase tracking-wider ${active ? "text-govt-navy" : complete ? "text-govt-green" : "text-muted"}`}>{stage}</span>
+              </div>
+              {index < stages.length - 1 && <span className={`mt-4 h-px flex-1 ${complete ? "bg-govt-green" : "bg-line"}`} />}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function TelemetryTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-md border border-line bg-field p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
+      <div className="mt-2 truncate font-display text-lg font-semibold text-main">{value}</div>
+      {hint && <div className="mt-1 text-[11px] text-muted">{hint}</div>}
+    </div>
+  );
+}
+
 export default function JobDetailPage() {
   const params = useParams<{ jobId: string }>();
   const router = useRouter();
@@ -206,6 +249,12 @@ export default function JobDetailPage() {
                   )}
                 </div>
                 <JobProgressBar value={job.progress_percent} label={job.stage || "Queued"} />
+                <ExecutionRail job={job} />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <TelemetryTile label="Progress" value={`${job.progress_percent}%`} hint={job.status} />
+                  <TelemetryTile label="Agent" value={job.assigned_agent_id || "Awaiting claim"} hint={readyState === "open" ? "WebSocket live" : "Polling fallback"} />
+                  <TelemetryTile label="Elapsed" value={job.started_at ? formatDateTime(job.started_at) : "Not started"} hint={job.completed_at ? "Completed" : "Active lifecycle"} />
+                </div>
                 <div className="rounded-md border border-line bg-field p-4">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Current message</div>
                   <p className="mt-2 text-sm text-main">
@@ -218,6 +267,15 @@ export default function JobDetailPage() {
                     <div className="mt-2 text-sm text-main">
                       {lastEvent.type} · {lastEvent.stage || job.stage || "N/A"} · {formatDateTime(lastEvent.ts)}
                     </div>
+                  </div>
+                )}
+                {job.status === "COMPLETED" && job.certificate_id && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-govt-green/30 bg-govt-greenLight p-4">
+                    <div>
+                      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-govt-green">Operation sealed</div>
+                      <p className="mt-1 text-sm text-main">Signed certificate and ledger entry are ready for independent verification.</p>
+                    </div>
+                    <Link href={`/verify/${job.certificate_id}`} className="fg-btn-primary !bg-govt-green !border-govt-green">Verify certificate →</Link>
                   </div>
                 )}
               </div>

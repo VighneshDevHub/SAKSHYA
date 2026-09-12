@@ -87,6 +87,17 @@ export default function JobsPage() {
   }, [router]);
 
   useEffect(() => {
+    const requestedType = new URLSearchParams(window.location.search).get("operation");
+    const requestedDevice = new URLSearchParams(window.location.search).get("device");
+    if (requestedType === "DRIVE_ERASE" || requestedType === "FILE_ERASE" || requestedType === "RECOVERY") {
+      handleOperationChange(requestedType);
+    }
+    if (requestedDevice) {
+      setDeviceId(requestedDevice);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!loading) {
       setRefreshing(true);
       void loadData(selectedStatus);

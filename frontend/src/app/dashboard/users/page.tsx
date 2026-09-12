@@ -46,7 +46,7 @@ export default function OperatorsAdminPage() {
   const [patching, setPatching] = useState<string | null>(null);
 
   const currentRole = getStoredRole();
-  const canManage = currentRole === "ADMINISTRATOR" || currentRole === "SUPERVISOR";
+  const canManage = currentRole === "ADMINISTRATOR";
   const canPromoteToAdmin = currentRole === "ADMINISTRATOR";
 
   async function reload() {
@@ -74,7 +74,7 @@ export default function OperatorsAdminPage() {
     if (!canManage) {
       // Non-admin users should not land here — nav already gates, but keep
       // a safety check at the data layer too.
-      setError("Access restricted to ADMINISTRATOR and SUPERVISOR roles.");
+      setError("Access restricted to ADMINISTRATOR role.");
       return;
     }
     void reload();
@@ -111,7 +111,7 @@ export default function OperatorsAdminPage() {
     <AppShell
       eyebrow="Platform Administration"
       title="Operators & Role Based Access"
-      subtitle="Manage platform operators and assign duty roles. Only ADMINISTRATOR and SUPERVISOR accounts may view or modify this page."
+      subtitle="Manage platform operators and assign duty roles. Only ADMINISTRATOR accounts may view or modify this page."
       actions={
         <button type="button" onClick={() => reload()} className="fg-btn !py-1.5 !px-3 text-xs">
           ↻ Refresh

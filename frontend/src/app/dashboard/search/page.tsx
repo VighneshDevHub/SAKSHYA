@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { universalSearch, UnauthorizedError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -54,7 +54,7 @@ function hrefFor(r: { result_type: SearchResultType; id: string }): string {
   }
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const q = params.get("q") ?? "";
@@ -328,5 +328,13 @@ export default function SearchPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-page p-8 text-sm text-muted">Loading search...</div>}>
+      <SearchPageContent />
+    </Suspense>
   );
 }

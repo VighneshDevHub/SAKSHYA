@@ -244,7 +244,7 @@ export default function SettingsPage() {
             <div className="grid gap-5 p-5 md:grid-cols-3">
               <Field label="UI Theme">
                 <div className="flex gap-2">
-                  {(["govt-light", "govt-dark"] as const).map((t) => {
+                  {(["govt-light", "dark"] as const).map((t) => {
                     const active = theme === t;
                     return (
                       <button
