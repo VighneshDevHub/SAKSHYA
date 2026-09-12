@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title>PRAMAAN logo</title>
+  <rect width="96" height="96" rx="12" fill="#0b2d4d"/>
+  <path d="M48 12 76 23v21c0 18-11 31-28 40C31 75 20 62 20 44V23l28-11Z" fill="#fff"/>
+  <path d="M35 31h15c9 0 14 5 14 12s-5 12-14 12h-7v11H35V31Zm8 7v10h6c4 0 7-2 7-5s-3-5-7-5h-6Z" fill="#0b2d4d"/>
+  <path d="M35 70h27" stroke="#d5a928" stroke-width="4" stroke-linecap="round"/>
+</svg>
