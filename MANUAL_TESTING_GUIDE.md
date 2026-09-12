@@ -151,7 +151,7 @@ Using the Swagger UI at http://localhost:8000/docs:
 2. Click "Try it out" → Enter:
 ```json
 {
-  "email": "admin@forensicguard.test",
+   "email": "admin@ntro.gov.in",
   "password": "Admin@1234",
   "full_name": "System Administrator"
 }
@@ -163,7 +163,7 @@ Using the Swagger UI at http://localhost:8000/docs:
 4. Login first — **POST /api/v1/auth/login**:
 ```json
 {
-  "email": "admin@forensicguard.test",
+   "email": "admin@ntro.gov.in",
   "password": "Admin@1234"
 }
 ```
@@ -189,7 +189,7 @@ from sqlalchemy import select, update
 
 async def promote():
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.email == 'admin@forensicguard.test'))
+      result = await db.execute(select(User).where(User.email == 'admin@ntro.gov.in'))
         user = result.scalar_one()
         user.role = UserRole.ADMINISTRATOR
         await db.commit()
@@ -204,9 +204,9 @@ asyncio.run(promote())
 Register these via Swagger POST /api/v1/auth/register (or the login page):
 
 ```
-investigator@forensicguard.test  / Invest@1234
-auditor@forensicguard.test       / Audit@1234
-supervisor@forensicguard.test    / Super@1234
+investigator@ntro.gov.in  / Invest@1234
+auditor@ntro.gov.in       / Audit@1234
+supervisor@ntro.gov.in    / Super@1234
 ```
 
 Then use the admin token to promote them:
@@ -219,10 +219,10 @@ Then use the admin token to promote them:
 ### 5.3 Test Login in the UI
 
 1. Go to http://localhost:3000/login
-2. Login as `admin@forensicguard.test` / `Admin@1234`
+2. Login as `admin@ntro.gov.in` / `Admin@1234`
 3. You should land on the **Dashboard** at `/dashboard`
 4. Check the sidebar — you should see: Dashboard, Task Queue, Device Inventory, Cases, Hash Chain Ledger, Report Center, Audit Log, **Operators**, **System Logs**, **Settings** (Admin-only items visible)
-5. Sign out, login as `auditor@forensicguard.test`
+5. Sign out, login as `auditor@ntro.gov.in`
 6. Sidebar should **NOT** show Operators or Settings — only read-only sections
 
 ---
@@ -233,7 +233,7 @@ Then use the admin token to promote them:
 
 ### 6.1 Manual Device Registration (UI)
 
-1. Login as `admin@forensicguard.test`
+1. Login as `admin@ntro.gov.in`
 2. Navigate to **Device Inventory** in the sidebar
 3. Click **"Register Device"**
 4. Fill in:
@@ -325,7 +325,7 @@ python -m recovery-engine.src.main ^
   --image test_evidence.img ^
   --output-dir recovered_output ^
   --api-url http://localhost:8000 ^
-  --email investigator@forensicguard.test ^
+   --email investigator@ntro.gov.in ^
   --password Invest@1234
 ```
 
@@ -375,7 +375,7 @@ print('Created test_wipe_target.img (~340 KB)')
 cd "C:\Users\vighn\Desktop\STAY-HARD\SIH 2026\SAKSHYA"
 python -m drive-eraser-agent.src.main ^
   --target test_wipe_target.img ^
-  --email investigator@forensicguard.test ^
+   --email investigator@ntro.gov.in ^
   --password Invest@1234 ^
   --dry-run
 ```
@@ -387,7 +387,7 @@ python -m drive-eraser-agent.src.main ^
 ```cmd
 python -m drive-eraser-agent.src.main ^
   --target test_wipe_target.img ^
-  --email investigator@forensicguard.test ^
+   --email investigator@ntro.gov.in ^
   --password Invest@1234
 ```
 
@@ -446,7 +446,7 @@ echo Case evidence notes        > test_erase_folder\notes.txt
 ```cmd
 python -m file-folder-eraser.src.main ^
   --target test_erase_folder ^
-  --email investigator@forensicguard.test ^
+   --email investigator@ntro.gov.in ^
   --password Invest@1234 ^
   --api-url http://localhost:8000
 ```
@@ -473,7 +473,7 @@ python -m file-folder-eraser.src.main --help
 
 ### 10.1 Create a Job
 
-1. Login as `investigator@forensicguard.test`
+1. Login as `investigator@ntro.gov.in`
 2. Navigate to **Task Queue** in the sidebar
 3. Click **"Create Job"**
 4. Fill in:
@@ -569,7 +569,7 @@ Repeat the tamper test from Flow 5 Step 8.5 — the ledger verify endpoint will 
 
 1. Open the case
 2. In the **Investigators** panel → click **Assign Investigator**
-3. Select `investigator@forensicguard.test`
+3. Select `investigator@ntro.gov.in`
 4. The **Investigation Timeline** should auto-add an event: `INVESTIGATOR_ASSIGNED`
 
 ### 12.3 Link an Operation
@@ -595,7 +595,7 @@ Repeat the tamper test from Flow 5 Step 8.5 — the ledger verify endpoint will 
 ### 12.6 Close a Case
 
 1. Only SUPERVISOR or ADMINISTRATOR can close a case
-2. Login as `admin@forensicguard.test`
+2. Login as `admin@ntro.gov.in`
 3. Open the case → **Close Case** button
 4. Timeline adds: `CASE_CLOSED`
 
@@ -615,7 +615,7 @@ Repeat the tamper test from Flow 5 Step 8.5 — the ledger verify endpoint will 
 
 Filter test:
 - Set date range to today → only today's operations
-- Filter by operator: `investigator@forensicguard.test` → only that user's ops
+- Filter by operator: `investigator@ntro.gov.in` → only that user's ops
 
 ### 13.2 System Logs
 
@@ -631,7 +631,7 @@ Filter test:
 
 ### 13.3 Settings (Admin Only)
 
-1. Login as `admin@forensicguard.test`
+1. Login as `admin@ntro.gov.in`
 2. Navigate to **Settings**
 3. Update:
    - Organization Name: `National Technical Research Organisation`
@@ -705,7 +705,7 @@ The job detail page shows a connection indicator:
 | `SN-TEST-001` | Device Inventory hit |
 | `Cyber Fraud` | Case hit |
 | `CERT-` (partial cert ID) | Certificate/operation hit |
-| `investigator@forensicguard.test` | Operator/user hit |
+| `investigator@ntro.gov.in` | Operator/user hit |
 | Full SHA-256 hash (copy from ledger) | Exact hash match → operation |
 
 ### 15.3 Filter Chips
